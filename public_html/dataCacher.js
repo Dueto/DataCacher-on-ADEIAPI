@@ -5,30 +5,27 @@
         var me = {};
         
         me.db = ''; 
-        me.webSocket = new webSockets('ws://localhost:12345/webSockets/index.php');
         me.dataHandl = new dataHandler();
         me.dateHelper = new dateTimeFormat();
         me.clientsCallback = '';
+        me.clientsCallbackAll = '';      
         
-        
-        
-        me.onopen = function()
-        {
-            
-        };
+        me.allData = {data: [], dateTime: [], label: []};
         
         me.getData = function(db_server,
                               db_name,
                               db_group,
                               db_mask,
                               window,
-                              aggregator,
-                              onEndCallBack)
+                              pointCount,
+                              onEndCallBack,
+                              onEndCallBackAll)
         {
           var self = this;
-          self.clientsCallback = onEndCallBack;          
+          self.clientsCallback = onEndCallBack; 
+          self.clientsCallbackAll = onEndCallBackAll;          
           db_mask = db_mask.split(',');
-          var level = self.dataHandl.getDataLevel(aggregator);
+          var level = self.dataHandl.getDataLevel(pointCount, window);
           
           if(self.dateHelper.checkWindowFormat(window))
           {
@@ -43,14 +40,16 @@
                    {         
                       if(results.rows.length == 0)
                       {  
-                          var stringToSend = db_server + ';' + db_name + ';' + db_group + ';' + db_mask[count] + ';' + window + ';mean;'  + aggregator;                          
-                          self.webSocket.setOnMessageHandler(function(msg)
-                          {   
-                                //var csv = new csvReader(msg.data);
-                                var objData = self.dataHandl.parseData(msg.data);
+                          var url = self.formURL(db_server, db_name, db_group, db_mask, window, level.window);                          
+                          var csv = new RGraph.CSV(url, function(csv)
+                          {                                   
+                                var objData = self.dataHandl.parseData(csv);
                                 if (objData.label != undefined) 
                                 {        
+                                    if(objData.data.length < 20000)
+                                    {
                                        self.clientsCallback(objData);
+                                       self.concatData(objData);
                                        self.db.transaction(function(req)
                                        {
                                            var idDataSource;
@@ -73,15 +72,21 @@
                                        },
                                        self.onError,
                                        self.onReadyTransaction);
+                                    }
+                                    else
+                                    {
+                                        self.clientsCallback(null);
+                                        throw 'Too much points.'
+                                    }
                                 }
                                 else
                                 {      
-                                     self.clientsCallback(null);
-                                     console.log('There is no data in server responces.');                                         
+                                     self.clientsCallback(null);                                     
+                                     throw 'There is no data in server responces.';                                         
                                 }                               
 
                           });
-                          self.webSocket.sendMessage(stringToSend);
+                          
                       }               
                       else
                       { 
@@ -91,8 +96,8 @@
                           var beginTime = self.dateHelper.splitTimeFromUnix(window.split('-')[0]);
                           var endTime = self.dateHelper.splitTimeFromUnix(window.split('-')[1]);   
                           
-                          beginTime = self.dataHandl.formatUnixData(beginTime, level);
-                          endTime = self.dataHandl.formatUnixData(endTime, level);
+                          /*beginTime = self.dataHandl.formatUnixData(beginTime, level.aggregator, level.level);
+                          endTime = self.dataHandl.formatUnixData(endTime, level.aggregator, level.level);*/
                           
                           self.db.transaction(function(req)
                           {      
@@ -114,6 +119,7 @@
                                         {                                       
                                             var label = results.rows.item(0).channellabel;
                                             self.clientsCallback({data: dataBuffer, dateTime: dateTime, label: label});
+                                            self.concatData({data: dataBuffer, dateTime: dateTime, label: label});
                                         }
                                         
                                         if(returnedBeginTime > beginTime && returnedEndTime == endTime)
@@ -188,18 +194,19 @@
                                                                                                  objLeftData.data = objLeftData.data.concat(objRightData.data);
                                                                                                  objLeftData.dateTime = objLeftData.dateTime.concat(objRightData.dateTime);
                                                                                                  onEndCallBack(objLeftData);
+                                                                                                 self.concatData(objLeftData);
                                                                                                  }
                                                                                                  else
                                                                                                  {
                                                                                                      onEndCallBack(null);
-                                                                                                     console.log('There is no data in server responses.');
+                                                                                                     throw ('There is no data in server responses.');
                                                                                                  }
                                                                                              });      
                                                                      }       
                                                                      else
                                                                      {
                                                                          onEndCallBack(null);
-                                                                         console.log('There is no data in server responses.');
+                                                                         throw ('There is no data in server responses.');
                                                                      }
                                                                  });
                                         }
@@ -253,36 +260,34 @@
                                         onEndCallBack)
         {
             var self = this;
-            var stringToSend = db_server + ';' + db_name + ';' + db_group + ';' + db_mask + ';' + window + ';mean;'  + level;             
-            self.webSocket.setOnMessageHandler(function(msg)
-            {    
-                //var csv = new csvReader(msg.data);
-                var objData = self.dataHandl.parseData(msg.data);
+            var url = self.formURL(db_server, db_name, db_group, db_mask, window, level);   
+            
+            var csv = RGraph.CSV(url, function(csv)
+            {  
+                var objData = self.dataHandl.parseData(csv);
                 if (objData.label != undefined) 
                 { 
                     var clone = {};
                     clone.data = objData.data.slice(0);
                     clone.dateTime = objData.dateTime.slice(0);
-                    self.insertData(clone, idDataSource);
+                    self.insertData(clone, idDataSource);                    
                     
-                    
-                        dataBuffer = dataBuffer.concat(objData.data);
-                        dateTime = dateTime.concat(objData.dateTime);
+                    dataBuffer = dataBuffer.concat(objData.data);
+                    dateTime = dateTime.concat(objData.dateTime);
 
-                        objData.data = dataBuffer;
-                        objData.dateTime = dateTime;
+                    objData.data = dataBuffer;
+                    objData.dateTime = dateTime;
 
-                        onEndCallBack(objData);
+                    onEndCallBack(objData);
+                    self.concatData(objData);
                    
                 }
                 else
                 {      
                     onEndCallBack(null);            
-                    console.log('There is no data in server responces.');                                         
+                    throw ('There is no data in server responces.');                                         
                 }    
             }); 
-            
-            self.webSocket.sendMessage(stringToSend);
             
         };
         
@@ -300,11 +305,11 @@
                                         onEndCallBack)
         {
             var self = this;
-            var stringToSend = db_server + ';' + db_name + ';' + db_group + ';' + db_mask + ';' + window + ';mean;'  + level;             
-            self.webSocket.setOnMessageHandler(function(msg)
-            {    
-                //var csv = new csvReader(msg.data);
-                var objData = self.dataHandl.parseData(msg.data);
+            var url = self.formURL(db_server, db_name, db_group, db_mask, window, level);   
+            
+            var csv = RGraph.CSV(url, function(csv)
+            {                    
+                var objData = self.dataHandl.parseData(csv);
                 if (objData.label != undefined) 
                 {   
                     var clone = {};
@@ -316,16 +321,14 @@
                     objData.dateTime = objData.dateTime.concat(dateTime);
 
                     onEndCallBack(objData);
+                    self.concatData(objData);
                 }
                 else
                 {      
                     onEndCallBack(null);
-                    console.log('There is no data in server responces.');                                         
+                    throw ('There is no data in server responces.');                                         
                 }    
-             });  
-             
-             self.webSocket.sendMessage(stringToSend);
-            
+             });               
         };
         
 
@@ -341,49 +344,33 @@
                                        onEndCallBack)
         {
             var self = this;
-            var stringToSend = db_server + ';' + db_name + ';' + db_group + ';' + db_mask + ';' + window + ';mean;'  + level;             
-            self.webSocket.setOnMessageHandler(function(msg)
-            {    
-                //var csv = new csvReader(msg.data);
-                var objData = self.dataHandl.parseData(msg.data);
+            var url = self.formURL(db_server, db_name, db_group, db_mask, window, level);   
+            
+            var csv = RGraph.CSV(url, function(csv)
+            {   
+                var objData = self.dataHandl.parseData(csv);
                 if (objData.label != undefined) 
                 {   
                     onEndCallBack(objData);
+                    self.concatData(objData);
                     self.insertData(objData, idDataSource);
                 }
                 else
                 {      
                     onEndCallBack(null);                    
-                    console.log('There is no data in server responces.');                                         
+                    throw ('There is no data in server responces.');                                         
                 }    
-            }); 
-            
-            self.webSocket.sendMessage(stringToSend);
+            });    
         };
         
-        
-        
-        
-        me.onOpenSocket = function(msg)
+        me.concatData = function(objData)
         {
-            console.log('Socket opened.');
-        };
-        
-        me.onErrorSocket = function(msg)
-        {
-            console.log(msg);
-        };
-        
-        me.onMessageSocket = function(msg)
-        {
-                
-        };
-        
-        me.onCloseSocket = function(msg)
-        {
-            console.log('Socket closed.');
-        };
-        
+            this.allData.dateTime = objData.dateTime;
+            this.allData.data.push(objData.data);
+            this.allData.label.push(objData.label);
+            this.clientsCallbackAll(this.allData);
+        };        
+          
         me.openDataBase = function(name)
         {
             if(this.db == '')
@@ -394,18 +381,18 @@
 
         me.formDataBase = function()
         {            
-                this.db.transaction(function (req)
-                {
-                    req.executeSql('CREATE TABLE IF NOT EXISTS DataSource (id INTEGER PRIMARY KEY AUTOINCREMENT,\n\
-                                                                             db_server,\n\
-                                                                             db_name,\n\
-                                                                             db_group,\n\
-                                                                             db_mask,\n\
-                                                                             channellabel)'); 
-                }, 
-                this.onError,
-                this.onReadyTransaction);
-            };
+            this.db.transaction(function (req)
+            {
+                req.executeSql('CREATE TABLE IF NOT EXISTS DataSource (id INTEGER PRIMARY KEY AUTOINCREMENT,\n\
+                                                                         db_server,\n\
+                                                                         db_name,\n\
+                                                                         db_group,\n\
+                                                                         db_mask,\n\
+                                                                         channellabel)'); 
+            }, 
+            this.onError,
+            this.onReadyTransaction);
+        };
 
         me.insertData = function(objData, idDataSource)
         {   
@@ -443,9 +430,9 @@
             console.log( 'Executing SQL completed.' );
         };
         
-       /* function formURL(db_server, db_name, db_group, db_mask, window, level)
+       me.formURL = function(db_server, db_name, db_group, db_mask, window, level)
         {
-            var url = 'http://localhost/adei-branch/adei/services/getdata.php?db_server=' + db_server 
+            var url = 'http://localhost/ADEI/ADEIWS/services/getdata.php?db_server=' + db_server 
                     + '&db_name=' + db_name
                     + '&db_group=' + db_group 
                     + '&db_mask=' + db_mask 
@@ -453,19 +440,11 @@
                     + '&window=' + level 
                     + '&format=csv';                        
             return url; 
-        }*/
-        
-        
+        };
         
         me.openDataBase('DB');    
         me.formDataBase(); 
         
-        me.webSocket.setOnOpenHandler(me.onOpenSocket);
-        me.webSocket.setOnMessageHandler(me.onMessageSocket);
-        me.webSocket.setOnCloseHandler(me.onCloseSocket); 
-        me.webSocket.setOnErrorHandler(me.onErrorSocket);
-        me.webSocket.openSocket();
-
         return me;
         
         

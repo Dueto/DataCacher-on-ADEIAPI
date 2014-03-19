@@ -14,58 +14,34 @@
                         {level: 'Sec', aggregator: '.000000', window: 1},
                         {level: 'Milisec', aggregator: '', window: 0}];
         
-        me.parseData = function(strData)
+        me.parseData = function(csv)
         {
-            var strDelimiter = ",";
-            var objPattern = new RegExp(
-                    (                            
-                        "(\\" + strDelimiter + "|\\r?\\n|\\r|^)" +                            
-                        "(?:\"([^\"]*(?:\"\"[^\"]*)*)\"|" +                           
-                        "([^\"\\" + strDelimiter + "\\r\\n]*))"
-                    ),
-                    "gi"
-                    );
-            var arrData = [[]];            
-            var arrMatches = null;            
-            while (arrMatches = objPattern.exec(strData))
-            {                    
-                var strMatchedDelimiter = arrMatches[1];
-                if (strMatchedDelimiter.length && (strMatchedDelimiter != strDelimiter))
-                {                          
-                    arrData.push( [] );
+            var numrows = csv.numrows;            
+            var numcols = csv.numcols;            
+            var labels = csv.getRow(0)[1];   
+            var allData = new Array(numcols);
+
+            for (i = 0; i < numcols; i++) 
+            {
+                allData[i] = new Array(numrows -1);
+                var row = csv.getCol(i,1);
+
+                for (j = 0; j < numrows - 1; j++) 
+                {           
+                    if (i === 0) 
+                    {      
+                        var Milliseconds = row[j].substr(22);
+                        allData[i][j] = this.dateHelper.splitTimeFromAny(row[j]);
+                    }
+                    else
+                    {
+                        allData[i][j] = parseFloat(row[j]);
+                    }
+
                 }
-                if (arrMatches[2])
-                {
-                    var strMatchedValue = arrMatches[2].replace(new RegExp( "\"\"", "g" ), "\"");
-                } 
-                else 
-                {
-                    var strMatchedValue = arrMatches[3];
-                }
-                arrData[arrData.length - 1].push( strMatchedValue );
             }
             
-            var labels = [];
-            labels = arrData[0][1];
-            var dateTime = [];
-            var allData = [];
-            for(var i = 1; i < arrData[0].length; i++)
-            {
-                //labels.push(arrData[0][i]);
-                //allData.push([]);
-            }
-            for(var i = 1; i < arrData.length; i++)
-            {
-                var k = 0;
-                dateTime.push(arrData[i][0]);                
-                for(var j = 1; j < arrData[0].length; j++)
-                {
-                    allData.push(arrData[i][j]);
-                } 
-                k++;
-            }
-            
-            return {data: allData,dateTime: dateTime,label: labels, };
+            return {data: allData[1], dateTime: allData[0], label: labels};
         };
         
         me.concatRowData = function(res, dataBuffer, dateTime)
@@ -77,19 +53,21 @@
             } 
         };
         
-         me.getDataLevel = function(window)
-        {   
-            if(window < 31536000)
+         me.getDataLevel = function(pointCount, window)
+         {   
+            var diffrence = window.split('-')[1] - window.split('-')[0];
+            var multiplier = diffrence/pointCount;            
+            if(multiplier < 31536000)
             {
-                if(window < 2592000)
+                if(multiplier < 2592000)
                 {
-                    if(window < 86400)
+                    if(multiplier < 86400)
                     {
-                        if(window < 3600)
+                        if(multiplier < 3600)
                         {
-                            if(window < 60)
+                            if(multiplier < 60)
                             {
-                                if(window < 1)
+                                if(multiplier < 1)
                                 {
                                     return this.dataLevel[6];
                                 }
@@ -127,33 +105,33 @@
             
         };
         
-        me.formatUnixData = function(dateTime, dataLevel)
+        me.formatUnixData = function(dateTime, aggregator, dataLevel)
         {
-            if(dataLevel.level == 'Year')
+            if(dataLevel == 'Year')
             {
-                return dateTime.substring(0,4) + dataLevel.aggregator;
+                return dateTime.substring(0,4) + aggregator;
             }
-            if(dataLevel.level == 'Month')
+            if(dataLevel == 'Month')
             {
-                return dateTime.substring(0,7) + dataLevel.aggregator;
+                return dateTime.substring(0,7) + aggregator;
             }
-            if(dataLevel.level == 'Day')
+            if(dataLevel == 'Day')
             {
-                return dateTime.substring(0,10) + dataLevel.aggregator;
+                return dateTime.substring(0,10) + aggregator;
             }
-            if(dataLevel.level == 'Hour')
+            if(dataLevel == 'Hour')
             {
-                return dateTime.substring(0,13) + dataLevel.aggregator;
+                return dateTime.substring(0,13) + aggregator;
             }
-            if(dataLevel.level == 'Min')
+            if(dataLevel == 'Min')
             {
-                return dateTime.substring(0,16) + dataLevel.aggregator;
+                return dateTime.substring(0,16) + aggregator;
             }
-            if(dataLevel.level == 'Sec')
+            if(dataLevel == 'Sec')
             {
-                return dateTime.substring(0,19) + dataLevel.aggregator;
+                return dateTime.substring(0,19) + aggregator;
             }
-            if(dataLevel.level == 'Milisec')
+            if(dataLevel == 'Milisec')
             {
                 return dateTime;
             }
