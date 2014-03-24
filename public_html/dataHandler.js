@@ -6,6 +6,14 @@
         
         me.dateHelper = new dateTimeFormat();
         
+        me.db_server = '';
+        me.db_name = '';
+        me.db_group = '';
+        me.db_mask = '';
+        me.window = '';
+        me.pointCount = '';
+        me.level = '';
+        
         me.dataLevel = [{level: 'Year', aggregator: '-01-01T00:00:00.000000', window: 31536000},
                         {level: 'Month', aggregator: '-01T00:00:00.000000', window: 2592000},
                         {level: 'Day', aggregator: 'T00:00:00.000000', window: 86400},                        
@@ -13,6 +21,33 @@
                         {level: 'Min', aggregator: ':00.000000', window: 60},      
                         {level: 'Sec', aggregator: '.000000', window: 1},
                         {level: 'Milisec', aggregator: '', window: 0}];
+                    
+        me.Data = {data: [], dateTime: [], label: []};
+        
+        me.currentItem = 0;
+        me.itemsCount = 0;
+        
+        me.clientsCallbackAll = 
+        
+         me.startBackgroundCaching = function(db_mask, level)
+         {             
+            var backCacher = new Worker('backgrDataCacher.js');
+            backCacher.postMessage(this.db_server + '<>' + this.db_name + '<>' + this.db_group + '<>' + db_mask + '<>' + this.window + '<>' + level);
+          
+         };
+         
+        me.setRequest = function(db_server, db_name, db_group, db_mask, window, pointCount)
+        {
+            this.db_server = db_server;
+            this.db_name = db_name;
+            this.db_group = db_group;
+            this.db_mask = db_mask;
+            this.window = window;
+            this.pointCount = pointCount;
+            
+            this.level = this.getDataLevel(this.pointCount, this.window);
+            this.itemsCount = this.db_mask.length;
+        };
         
         me.parseData = function(csv)
         {
@@ -30,7 +65,7 @@
                 {           
                     if (i === 0) 
                     {      
-                        var Milliseconds = row[j].substr(22);
+                        //var Milliseconds = row[j].substr(22);
                         allData[i][j] = this.dateHelper.splitTimeFromAny(row[j]);
                     }
                     else
@@ -53,7 +88,7 @@
             } 
         };
         
-         me.getDataLevel = function(pointCount, window)
+        me.getDataLevel = function(pointCount, window)
          {   
             var diffrence = window.split('-')[1] - window.split('-')[0];
             var multiplier = diffrence/pointCount;            
@@ -136,6 +171,70 @@
                 return dateTime;
             }
         };
+        
+        me.concatData = function(objData)
+        {            
+            this.Data.dateTime = objData.dateTime;
+            this.Data.data.push(objData.data);
+            this.Data.label.push(objData.label);
+            this.currentItem++;
+            if(this.currentItem == this.itemsCount)
+            {
+                this.clientsCallbackAll(this.Data);
+                var mask = this.db_mask[0];
+                for (var i = 1; i < this.db_mask.length; i++)
+                {
+                   mask = mask + ',' + this.db_mask[i];
+                }
+                this.startBackgroundCaching(mask, this.getDataLevelForBackgr(this.level).window); 
+            }
+            
+            
+        };
+        
+        me.setItemsCount = function(count)
+        {
+            this.itemsCount = count;
+        };
+        
+        me.setClientsCallback = function(ClientsCallBack)
+        {
+            this.clientsCallbackAll = ClientsCallBack;
+        };
+        
+        me.flushData = function()
+        {
+            this.Data = {data: [], dateTime: [], label: []};        
+            this.currentItem = 0;
+            this.itemsCount = 0;        
+            this.clientsCallbackAll = '';
+            this.db_server = '';
+            this.db_name = '';
+            this.db_group = '';
+            this.db_mask = '';
+            this.window = '';
+            this.pointCount = '';
+            this.level = '';
+        };
+        
+        me.getDataLevelForBackgr = function(level)
+        {
+            for(var i = 0; i < this.dataLevel.length; i++)
+            {
+                if(this.dataLevel[i] == level)
+                {
+                    if(i == this.dataLevel.length - 1)
+                    {
+                        return level;
+                    }
+                    else 
+                    {
+                        return this.dataLevel[i + 1];  
+                    }
+                }
+            }
+        };
+        
         
         return me;
             

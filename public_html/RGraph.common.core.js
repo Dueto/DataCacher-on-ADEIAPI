@@ -3074,11 +3074,11 @@
     RGraph.AJAX = function (url, callback)
     {
         // Mozilla, Safari, ...
-        if (window.XMLHttpRequest) {
+        if (XMLHttpRequest) {
             var httpRequest = new XMLHttpRequest();
 
         // MSIE
-        } else if (window.ActiveXObject) {
+        } else if (ActiveXObject) {
             var httpRequest = new ActiveXObject("Microsoft.XMLHTTP");
         }
 
