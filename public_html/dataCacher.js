@@ -104,8 +104,12 @@
                           
                           self.db.transaction(function(req)
                           {      
+//                              req.executeSql('SELECT DateTime, PointData FROM "' + self.createTableName(idDataSource) + '" WHERE  (DateTime) <=  "' + endTime + '" AND \n\
+//                                                                                         (DateTime) >= "' + beginTime + '" AND (DateTime) LIKE "%' + self.level.aggregator + '%" ORDER BY DateTime', [],function(counter){ return function (req, res)
+//                              
+//                              
                               req.executeSql('SELECT DateTime, PointData FROM "' + self.createTableName(idDataSource) + '" WHERE  (DateTime) <=  "' + endTime + '" AND \n\
-                                                                                         (DateTime) >= "' + beginTime + '" AND (DateTime) LIKE "%' + self.level.aggregator + '%" ORDER BY DateTime', [],function(counter){ return function (req, res)
+                                                                                         (DateTime) >= "' + beginTime + '" ORDER BY DateTime', [],function(counter){ return function (req, res)
                               
                               
                               {            

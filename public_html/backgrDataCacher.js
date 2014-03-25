@@ -21,16 +21,11 @@
           {
               for (var g = 0; g < db_mask.length; g++) 
               {      
-                  req.executeSql('SELECT * FROM DataSource WHERE db_server = "' + db_server + '" AND \n\
-                                                                  db_name = "' + db_name + '" AND \n\
-                                                                  db_group = "' + db_group + '" AND \n\
-                                                                  db_mask = "' + db_mask[g] + '_' + level + '"', [], function(count){ return function (req, results)
-                   {   
-                       if(results.rows.length == 0)
-                       {
-                            var url = formURL(db_server, db_name, db_group, db_mask[count], window, level);  
+                  
+                       
+                            var url = formURL(db_server, db_name, db_group, db_mask[g], window, level);  
                             console.log(url);
-                            var csv = new RGraph.CSV(url, function(csv)
+                            var csv = new RGraph.CSV(url,function(count){return function(csv)
                             {                                   
                                   var objData = parseData(csv);                          
                                   if (objData.label != undefined) 
@@ -52,7 +47,7 @@
                                                    idDataSource = results.rows.item(0).id; 
                                                    req.executeSql('CREATE TABLE  "' + idDataSource + '_' + level + '" (DateTime NOT NULL UNIQUE, PointData)');
                                                    req.executeSql('CREATE INDEX IF NOT EXISTS  DateTimeIndex ON "' + idDataSource + '_' + level + '" (DateTime)');  
-                                                   for (p = 0; p < objData.dateTime.length; p++) 
+                                                   for (var p = 0; p < objData.dateTime.length; p++) 
                                                    {                         
                                                        req.executeSql('INSERT OR REPLACE INTO "' + idDataSource + '_' + level + '" (DateTime, PointData) ' + 'VALUES ' + '("' + objData.dateTime[p] + '",' + objData.data[p] + ')');                                                
                                                    }  
@@ -69,13 +64,10 @@
                                      
                                   }                               
 
-                            });
-                        }
-                        else
-                        {                            
-                           
-                        }
-                   }}(g));
+                            }}(g));
+                        
+                       
+                   
                }
               
           },

@@ -17,29 +17,10 @@ module("class DataCacher");
 // 	});
 // });
 // 
-// asyncTest("CheckChannelCount", 1 , function() { 	
-//        DataCacher = new dataCacher();
-//        var count = 0;
-// 	DataCacher.getData("autogen", "hourly", "default", "all", "1363096123-1363355323", 60, function(data) 
-//        {
-//                  //console.log(data);
-//                  count++;                  
-//                  if(count == 6)
-//                  {                      
-//                      ok(true, "Ok");  
-//                      start();
-//                  }
-// 	},
-//        function(data)
-//        {
-//            //console.log(data);
-//        });
-// });
- 
-  asyncTest("CheckChannelMinute", 1 , function() { 	
+ asyncTest("CheckChannelCount", 1 , function() { 	
         DataCacher = new dataCacher();
         var count = 0;
- 	DataCacher.getData("autogen", "minutely", "default", "all", "1363096123-1363355323", 2, function(data) 
+ 	DataCacher.getData("autogen", "hourly", "default", "all", "1363096123-1363355323", 70, function(data) 
         {
                   console.log(data);
                   count++;                  
@@ -49,49 +30,42 @@ module("class DataCacher");
                       start();
                   }
  	},
-        function(data){
+        function(data)
+        {
             console.log(data);
         });
  });
- 
-//  asyncTest("CheckGettingData", 1 , function() { 	
-//        var DataCacher = new dataCacher();        
-// 	DataCacher.getData("autogen", "hourly", "default", "0", "1363096123-1363355323", 3, function(data) {
-//                     console.log(data); 
-//                      if(data !== null && data.data.length == 4)
-//                      {                                               
-//                        ok(true, "Ok");  
-//                        start();
-//                      }
-//                      else 
-//                      {
-//                          ok(false, "Object is null or count isn't equal.");
-//                          start();
-//                      }
-//
-//
-//
+// 
+//  asyncTest("CheckChannelMinute", 1 , function() { 	
+//        DataCacher = new dataCacher();
+//        var count = 0;
+// 	DataCacher.getData("autogen", "minutely", "default", "all", "1363096123-1363355323", 60, function(data) 
+//        {
+//                  console.log(data);
+//                  count++;                  
+//                  if(count == 6)
+//                  {                      
+//                      ok(true, "Ok");  
+//                      start();
+//                  }
 // 	},
-//        function(data){});
+//        function(data){
+//            console.log(data);
+//        });
 // });
+// 
+
 // 
 //   asyncTest("CheckDataLeftLength", 1 , function() { 	
 //        DataCacher = new dataCacher();        
-// 	DataCacher.getData("autogen", "minutely", "default", "0", "1363185095-1363357895", 3600, function(data) {
+// 	DataCacher.getData("autogen", "minutely", "default", "all", "1363185095-1363357895", 500, function(data) {
 //         console.log(data);
 //                      if(data !== null)
 //                      {   
 //                          ok(true, "Ok");  
 //                          start();
 //                      }
-//                      else 
-//                      {
-//                          ok(false, "Object is null.");
-//                          start();
-//                      }
-//
-//
-//
+//                    
 // 	});
 // });
 // 

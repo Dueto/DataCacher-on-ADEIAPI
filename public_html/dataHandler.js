@@ -27,7 +27,7 @@
         me.currentItem = 0;
         me.itemsCount = 0;
         
-        me.clientsCallbackAll = 
+        me.clientsCallbackAll = '';
         
          me.startBackgroundCaching = function(db_mask, level)
          {             
